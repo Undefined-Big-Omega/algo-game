@@ -62,7 +62,7 @@ public class SimulateBattleImpl implements SimulateBattle {
             if (computerArmy != null && computerArmy.getUnits() != null) {
                 for (Unit u : computerArmy.getUnits()) {
                     if (u != null && u.isAlive()) {
-                        compUnits.add(new UnitWithPriority(u));
+                        compUnits.add(new UnitWithPriority(u, compUnits.size(), true));
                     }
                 }
             }
@@ -70,10 +70,13 @@ public class SimulateBattleImpl implements SimulateBattle {
             if (playerArmy != null && playerArmy.getUnits() != null) {
                 for (Unit u : playerArmy.getUnits()) {
                     if (u != null && u.isAlive()) {
-                        playUnits.add(new UnitWithPriority(u));
+                        playUnits.add(new UnitWithPriority(u, playUnits.size(), false));
                     }
                 }
             }
+
+            sortByAttackDescending(compUnits);
+            sortByAttackDescending(playUnits);
 
             List<UnitWithPriority> result = new ArrayList<>();
             int compIdx = 0;
@@ -89,8 +92,6 @@ public class SimulateBattleImpl implements SimulateBattle {
                     playIdx++;
                 }
             }
-
-            sortByAttackDescending(result);
 
             return result;
         }
@@ -125,12 +126,24 @@ public class SimulateBattleImpl implements SimulateBattle {
             int i = 0, j = 0, k = left;
 
             while (i < n1 && j < n2) {
-                if (leftList.get(i).attackPower >= rightList.get(j).attackPower) {
-                    list.set(k, leftList.get(i));
+                UnitWithPriority leftUnit = leftList.get(i);
+                UnitWithPriority rightUnit = rightList.get(j);
+
+                if (leftUnit.attackPower > rightUnit.attackPower) {
+                    list.set(k, leftUnit);
                     i++;
-                } else {
-                    list.set(k, rightList.get(j));
+                } else if (leftUnit.attackPower < rightUnit.attackPower) {
+                    list.set(k, rightUnit);
                     j++;
+                } else {
+                    // При равной силе атаки сохраняем порядок (стабильная сортировка)
+                    if (leftUnit.insertionOrder <= rightUnit.insertionOrder) {
+                        list.set(k, leftUnit);
+                        i++;
+                    } else {
+                        list.set(k, rightUnit);
+                        j++;
+                    }
                 }
                 k++;
             }
@@ -166,10 +179,14 @@ public class SimulateBattleImpl implements SimulateBattle {
     private static class UnitWithPriority {
         final Unit unit;
         final int attackPower;
+        final int insertionOrder;
+        final boolean isComputerUnit;
 
-        UnitWithPriority(Unit unit) {
+        UnitWithPriority(Unit unit, int insertionOrder, boolean isComputerUnit) {
             this.unit = unit;
             this.attackPower = unit.getBaseAttack();
+            this.insertionOrder = insertionOrder;
+            this.isComputerUnit = isComputerUnit;
         }
     }
 }
